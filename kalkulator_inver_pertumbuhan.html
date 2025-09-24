@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kalkulator Invers Pertumbuhan Ekonomi</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0; padding: 20px;
+      display: flex; justify-content: center;
+    }
+    .container {
+      width: 900px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 { margin-top: 0; font-size: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    label { font-weight: bold; font-size: 14px; }
+    input {
+      width: 100%; padding: 8px;
+      border: 1px solid #ccc; border-radius: 6px;
+      font-size: 14px;
+    }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    button {
+      background: #2563eb; color: white;
+      border: none; padding: 8px 12px;
+      border-radius: 6px; cursor: pointer;
+    }
+    button:hover { background: #1e40af; }
+    #hasil { margin-top: 10px; font-weight: bold; color: #333; }
+    canvas { margin-top: 20px; background: #fafafa; border: 1px solid #ddd; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kalkulator Invers Pertumbuhan Ekonomi</h1>
+
+    <div class="grid">
+      <div>
+        <label>PDB Sekarang:</label>
+        <input type="number" id="pdbSekarang" placeholder="contoh: 1500000" />
+      </div>
+      <div>
+        <label>PDB Lalu:</label>
+        <input type="number" id="pdbLalu" placeholder="contoh: 1400000" />
+      </div>
+      <div>
+        <label>Pertumbuhan (%):</label>
+        <input type="number" id="pertumbuhan" placeholder="contoh: 7.1" />
+      </div>
+      <div>
+        <label>Tahun:</label>
+        <input type="number" id="tahun" placeholder="contoh: 2024" />
+      </div>
+    </div>
+
+    <div class="controls">
+      <button onclick="hitungPertumbuhan()">Hitung Pertumbuhan (%)</button>
+      <button onclick="hitungPdbLalu()">Hitung PDB Lalu</button>
+      <button onclick="hitungPdbSekarang()">Hitung PDB Sekarang</button>
+      <button onclick="tambahData()">Tambah Data</button>
+      <button onclick="tampilkanGrafik()">Tampilkan Grafik</button>
+      <button onclick="resetData()">Reset Data</button>
+    </div>
+
+    <div id="hasil">Hasil akan muncul di sini</div>
+
+    <canvas id="chartPDB" height="150"></canvas>
+    <canvas id="chartGrowth" height="150"></canvas>
+  </div>
+
+  <script>
+    let dataTahun = [];
+    let dataPDB = [];
+
+    const hasilDiv = document.getElementById("hasil");
+
+    function showHasil(msg) {
+      hasilDiv.textContent = msg;
+    }
+
+    function hitungPertumbuhan() {
+      const now = parseFloat(document.getElementById("pdbSekarang").value);
+      const prev = parseFloat(document.getElementById("pdbLalu").value);
+      if (isNaN(now) || isNaN(prev) || prev === 0) {
+        alert("Isi PDB Sekarang dan PDB Lalu dengan benar!");
+        return;
+      }
+      const g = ((now - prev) / prev) * 100;
+      showHasil(`Pertumbuhan Ekonomi = ${g.toFixed(2)}%`);
+    }
+
+    function hitungPdbLalu() {
+      const now = parseFloat(document.getElementById("pdbSekarang").value);
+      const g = parseFloat(document.getElementById("pertumbuhan").value);
+      if (isNaN(now) || isNaN(g)) {
+        alert("Isi PDB Sekarang dan Pertumbuhan (%) dengan benar!");
+        return;
+      }
+      const prev = now / (1 + g / 100);
+      showHasil(`PDB Lalu = ${prev.toFixed(2)}`);
+    }
+
+    function hitungPdbSekarang() {
+      const prev = parseFloat(document.getElementById("pdbLalu").value);
+      const g = parseFloat(document.getElementById("pertumbuhan").value);
+      if (isNaN(prev) || isNaN(g)) {
+        alert("Isi PDB Lalu dan Pertumbuhan (%) dengan benar!");
+        return;
+      }
+      const now = prev * (1 + g / 100);
+      showHasil(`PDB Sekarang = ${now.toFixed(2)}`);
+    }
+
+    function tambahData() {
+      const tahun = document.getElementById("tahun").value;
+      const pdb = parseFloat(document.getElementById("pdbSekarang").value);
+      if (!tahun || isNaN(pdb)) {
+        alert("Isi Tahun dan PDB Sekarang dengan benar!");
+        return;
+      }
+      dataTahun.push(tahun);
+      dataPDB.push(pdb);
+      showHasil(`Data tahun ${tahun} ditambahkan`);
+    }
+
+    // Chart instances
+    const ctxPDB = document.getElementById("chartPDB").getContext("2d");
+    const ctxGrowth = document.getElementById("chartGrowth").getContext("2d");
+
+    let chartPDB = new Chart(ctxPDB, {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "PDB", data: [], borderColor: "blue", fill: false }] },
+      options: { responsive: true, scales: { x: { title: { display: true, text: "Tahun" } }, y: { title: { display: true, text: "PDB" } } } }
+    });
+
+    let chartGrowth = new Chart(ctxGrowth, {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "Pertumbuhan (%)", data: [], borderColor: "green", fill: false }] },
+      options: { responsive: true, scales: { x: { title: { display: true, text: "Tahun" } }, y: { title: { display: true, text: "%" } } } }
+    });
+
+    function tampilkanGrafik() {
+      if (dataTahun.length < 2) {
+        alert("Minimal 2 data tahun untuk grafik!");
+        return;
+      }
+
+      // Update PDB chart
+      chartPDB.data.labels = dataTahun;
+      chartPDB.data.datasets[0].data = dataPDB;
+      chartPDB.update();
+
+      // Hitung pertumbuhan
+      let growth = [];
+      let tahunGrowth = [];
+      for (let i = 1; i < dataPDB.length; i++) {
+        const g = ((dataPDB[i] - dataPDB[i-1]) / dataPDB[i-1]) * 100;
+        growth.push(g.toFixed(2));
+        tahunGrowth.push(dataTahun[i]);
+      }
+
+      // Update Growth chart
+      chartGrowth.data.labels = tahunGrowth;
+      chartGrowth.data.datasets[0].data = growth;
+      chartGrowth.update();
+    }
+
+    function resetData() {
+      dataTahun = [];
+      dataPDB = [];
+      chartPDB.data.labels = [];
+      chartPDB.data.datasets[0].data = [];
+      chartPDB.update();
+      chartGrowth.data.labels = [];
+      chartGrowth.data.datasets[0].data = [];
+      chartGrowth.update();
+      showHasil("Data direset.");
+    }
+  </script>
+</body>
+</html>
